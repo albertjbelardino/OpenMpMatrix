@@ -1,0 +1,41 @@
+/*
+1) Send to each slave process one row of first matrix and one column of second matrix
+	-returns: 1 matrix entry
+2) 
+
+
+for each column vector in B
+   //this following is the matrix times vector program
+   broadcast column vector, b to every slave
+   for each row in A
+       send row a to some slave process 
+
+for each row in A
+   //this following is the matrix times vector program
+   broadcast row a to every slave
+   for each column vector in B
+       send column vector b to some slave process 	
+*/
+
+//start from here
+for each row in A
+   //this following is the matrix times vector program
+   for each column vector in B
+       send row a to every slave
+       send column vector b to some slave process 	
+
+//master code
+for i = 0: i < n^2: i++
+   receive result
+   put in proper index 
+   if there are more rows/columns to send
+       send more
+   else 
+       stop
+//slave code here
+while(1)
+  receive row and column
+  if stop
+    break
+  compute dot product
+  send back to master
