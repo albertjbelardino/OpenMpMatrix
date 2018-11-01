@@ -31,7 +31,7 @@ int main(int argc, char* argv[])
   double total_times;
   int run_index;
   int nruns;
-  int myid, numprocs; //master,
+  int myid, master, numprocs;
   int i, j, numsent, sender;
   int anstype, row;
   srand(time(0));
@@ -48,8 +48,8 @@ int main(int argc, char* argv[])
     cc2 = (double*)malloc(sizeof(double) * nrows * ncols);
 
     buffer = (double*)malloc(sizeof(double) * ncols);
-    //master = 0; // redundant with next line
-    if (myid == 0) {
+    master = 0;
+    if (myid == master) {
       // Master Code goes here
 		/*
 			first part
@@ -107,6 +107,7 @@ for each row in A
              send column vector b to some slave process 
 */
 
+/*
       starttime = MPI_Wtime();
       numsent = 0;
       MPI_Bcast(bb, ncols, MPI_DOUBLE, master, MPI_COMM_WORLD);
@@ -135,6 +136,25 @@ for each row in A
           MPI_Send(MPI_BOTTOM, 0, MPI_DOUBLE, sender, 0, MPI_COMM_WORLD);
         }
       }
+*/
+
+     /*
+      * Binh Solution
+     */
+
+      for (i = 0; i < nrows; i++) { //for each row in A
+        for (j = 0; j < ncols; j++)
+          buffer[j] = aa[i*ncols + j];
+        MPI_Bcast(buffer, ncols, MPI_DOUBLE, master, MPI_COMM_WORLD);
+        for (j = 0; j < ncols; j++) {
+          for (k = 0; k < nrows; k++)
+            buffer[k] = bb[j + k*nrows];
+          BPI_Send(buffer, nrows, MPI_DOUBLE, i*ncols + j, i*ncols + j, MPI_COMM_WORLD);
+          numsent++;
+        }
+      }
+
+     //end Binh Solution
 
 
       endtime = MPI_Wtime();
