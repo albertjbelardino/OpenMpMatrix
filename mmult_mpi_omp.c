@@ -7,7 +7,7 @@
 
 double* gen_matrix(int n, int m);
 int mmult(double *c, double *a, int aRows, int aCols, double *b, int bRows, int bCols);
-void compare_matrix(double *a, double *b, int nRows, int nCols);
+void compare_matrices(double *a, double *b, int nRows, int nCols);
 
 /** 
     Program to multiply a matrix times a matrix using both
