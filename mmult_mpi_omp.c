@@ -26,6 +26,15 @@ int main(int argc, char* argv[])
   double starttime, endtime;
   MPI_Status status;
   /* insert other global variables here */
+  double *buffer, ans;
+  double *times;
+  double total_times;
+  int run_index;
+  int nruns;
+  int myid, numprocs; //master,
+  int i, j, numsent, sender;
+  int anstype, row;
+  srand(time(0));
  
   MPI_Init(&argc, &argv);
   MPI_Comm_size(MPI_COMM_WORLD, &numprocs);
@@ -33,6 +42,13 @@ int main(int argc, char* argv[])
   if (argc > 1) {
     nrows = atoi(argv[1]);
     ncols = nrows;
+    aa = (double*)malloc(sizeof(double) * nrows * ncols);
+    bb = (double*)malloc(sizeof(double) * nrows * ncols);
+    cc1 = (double*)malloc(sizeof(double) * nrows * ncols);
+    cc2 = (double*)malloc(sizeof(double) * nrows * ncols);
+
+    buffer = (double*)malloc(sizeof(double) * ncols);
+    //master = 0; // redundant with next line
     if (myid == 0) {
       // Master Code goes here
 		/*
@@ -44,22 +60,83 @@ for each row in A
    for each column vector in B
        send column vector b to some slave process 
 		*/
+      MPI_Bcast(b, ncols, MPI_DOUBLE, master, MPI_COMM_WORLD);
+      for (i = 0; i < min(numprocs-1, nrows); i++) {
+        for (j = 0; j < ncols; j++) {
+          buffer[j] = aa[i * ncols + j];
+        }
+        MPI_Send(buffer, ncols, MPI_DOUBLE, i+1, i+1, MPI_COMM_WORLD);
+        numsent++;
+      }
+
+
       aa = gen_matrix(nrows, ncols);
       bb = gen_matrix(ncols, nrows);
-      cc1 = malloc(sizeof(double) * nrows * nrows); 
+      cc1 = malloc(sizeof(double) * nrows * nrows);
+
+
+     /*
+      * Generate Random Matrices aa, bb, cc1
+      * Note: This needs to be adapted to accept various dimension matrices
+      * including test to see if aa works with bb
+     */
+      for (i = 0; i < nrows; i++) {
+        for (j = 0; j < ncols; j++) {
+          aa[i*ncols + j] = (double)rand()/RAND_MAX;
+        }
+      }
+      for (i = 0; i < ncols; i++) {
+        for (j = 0; j < nrows; j++) {
+          bb[i*ncols + j] = (double)rand()/RAND_MAX;
+        }
+      }
+      for (i = 0; i < ncols; i++) { //must be [m,p] if aa=[m,n] bb=[n,p]
+        for (j = 0; j < ncols; j++) {
+          cc1[i*ncols + j] = (double)rand()/RAND_MAX;
+        }
+      }
+
+
+      // starttime = MPI_Wtime();// moved below
+
+/*    //start from here
+         for each row in A
+         //this following is the matrix times vector program
+         for each column vector in B
+             send row a to every slave
+             send column vector b to some slave process 
+*/
+
       starttime = MPI_Wtime();
-      /* Insert your master code here to store the product into cc1 */
-	/*
-		second part
-               //master code
-for i = 0: i < n^2: i++
-   receive result
-   put in proper index 
-   if there are more rows/columns to send
-       send more
-   else 
-       stop
-	*/
+      numsent = 0;
+      MPI_Bcast(bb, ncols, MPI_DOUBLE, master, MPI_COMM_WORLD);
+      for (i = 0; i < min(numprocs-1, nrows); i++) {
+        for (j = 0; j < ncols; j++) {
+          buffer[j] = aa[i * ncols + j];
+        }
+        MPI_Send(buffer, ncols, MPI_DOUBLE, i+1, i+1, MPI_COMM_WORLD);
+        numsent++;
+      }
+
+      for (i = 0; i < nrows; i++) {
+        MPI_Recv(&ans, 1, MPI_DOUBLE, MPI_ANY_SOURCE, MPI_ANY_TAG,
+                 MPI_COMM_WORLD, &status);
+        sender = status.MPI_SOURCE;
+        anstype = status.MPI_TAG;
+        c[anstype-1] = ans;
+        if (numsent < nrows) {
+          for (j = 0; j < ncols; j++) {
+            buffer[j] = aa[numsent*ncols + j];
+          }
+          MPI_Send(buffer, ncols, MPI_DOUBLE, sender, numsent+1,
+                   MPI_COMM_WORLD);
+          numsent++;
+        } else {
+          MPI_Send(MPI_BOTTOM, 0, MPI_DOUBLE, sender, 0, MPI_COMM_WORLD);
+        }
+      }
+
+
       endtime = MPI_Wtime();
       printf("%f\n",(endtime - starttime));
       cc2  = malloc(sizeof(double) * nrows * nrows);
