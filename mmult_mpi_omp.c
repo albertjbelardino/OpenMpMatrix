@@ -1,13 +1,16 @@
+
 #include "mpi.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 #include <sys/times.h>
+//#include "mmult.c"
 #define min(x, y) ((x)<(y)?(x):(y))
 
+void compare_matrix(double *a, double *b, int nRows, int nCols);
 double* gen_matrix(int n, int m);
 int mmult(double *c, double *a, int aRows, int aCols, double *b, int bRows, int bCols);
-void compare_matrix(double *a, double *b, int nRows, int nCols);
+
 
 /** 
     Program to multiply a matrix times a matrix using both
