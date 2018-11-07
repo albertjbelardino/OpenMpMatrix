@@ -29,7 +29,7 @@ int main(int argc, char* argv[])
   MPI_Status status;
   /* insert other global variables here */
   int i, j, k, numsent, sender;
-  int anstype, entry;
+  int anstype;
   int cur_row, cur_col;
   int prev_row, cur_pos;
   MPI_Init(&argc, &argv);
@@ -48,8 +48,11 @@ int main(int argc, char* argv[])
       starttime = MPI_Wtime();
       /* Insert your master code here to store the product into cc1 */
       numsent = 0;
-      cur_row = (numprocs-2) / ncols;
-      cur_col = (numprocs-2) % ncols;
+      cur_row = min((numprocs-2) / ncols, nrows - 1);
+      if (numprocs - 1 > nrows * ncols)
+        cur_col = ncols - 1;
+      else
+        cur_col = (numprocs-2) % ncols;
       for (i = 0; i < cur_row; i++) {
         for (j = 0; j < ncols; j++)
           buffer[j] = aa[i*ncols + j];
@@ -98,21 +101,29 @@ int main(int argc, char* argv[])
       cc2  = malloc(sizeof(double) * nrows * nrows);
       mmult(cc2, aa, nrows, ncols, bb, ncols, nrows);
       compare_matrices(cc2, cc1, nrows, nrows);
+      free(aa);
+      free(bb);
+      free(cc1);
+      free(cc2);
     } else {
       // Slave Code goes here
       a = malloc(sizeof(double) * ncols);
-      prev_row = 0;
-      MPI_Bcast(a, ncols, MPI_DOUBLE, master, MPI_COMM_WORLD);
+      prev_row = -1;
       if (myid <= nrows * ncols) {
         while (1) {
           MPI_Recv(buffer, nrows, MPI_DOUBLE, master, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-          if (status.MPI_TAG == 0)
+          if (status.MPI_TAG == 0) {
+            while (prev_row < nrows - 1) {
+              MPI_Bcast(a, ncols, MPI_DOUBLE, master, MPI_COMM_WORLD);
+              prev_row++;
+            }
             break;
+          }
           cur_pos = status.MPI_TAG; 
           cur_row = (cur_pos-1) / ncols;
-          if (cur_row != prev_row) {
+          while (prev_row < cur_row) {
             MPI_Bcast(a, ncols, MPI_DOUBLE, master, MPI_COMM_WORLD);
-            prev_row = cur_row;
+            prev_row++;
           }
           ans = 0.0;
           for (i = 0; i < ncols; i++)
@@ -120,10 +131,13 @@ int main(int argc, char* argv[])
           MPI_Send(&ans, 1, MPI_DOUBLE, master, cur_pos, MPI_COMM_WORLD);
         }
       }
+      free(a);
     }
+    free(buffer);
   } else {
     fprintf(stderr, "Usage matrix_times_vector <size>\n");
   }
   MPI_Finalize();
   return 0;
 }
+
