@@ -97,7 +97,7 @@ int main(int argc, char* argv[])
         MPI_Bcast(buffer, ncols1, MPI_DOUBLE, master, MPI_COMM_WORLD);
         for (j = 0; j < ncols2; j++) {
           for (k = 0; k < nrows2; k++)
-            buffer[k] = bb[j + k*nrows2];
+            buffer[k] = bb[j + k*ncols2];
           MPI_Send(buffer, nrows2, MPI_DOUBLE, i*ncols2 + j + 1, i*ncols2 + j + 1, MPI_COMM_WORLD);
           numsent++;
         }
@@ -107,7 +107,7 @@ int main(int argc, char* argv[])
       MPI_Bcast(buffer, ncols1, MPI_DOUBLE, master, MPI_COMM_WORLD);
       for (i = 0; i < cur_col + 1; i++) {
         for (j = 0; j < nrows2; j++)
-          buffer[j] = bb[i + j*nrows2];
+          buffer[j] = bb[i + j*ncols2];
         MPI_Send(buffer, nrows2, MPI_DOUBLE, cur_row*ncols2 + i + 1, cur_row*ncols2 + i + 1, MPI_COMM_WORLD);
         numsent++;
       }
@@ -127,7 +127,7 @@ int main(int argc, char* argv[])
             cur_col++;
           }
           for (j = 0; j < nrows2; j++)
-            buffer[j] = bb[cur_col + j*nrows2];
+            buffer[j] = bb[cur_col + j*ncols2];
           MPI_Send(buffer, nrows2, MPI_DOUBLE, sender, numsent + 1, MPI_COMM_WORLD);
           numsent++;
         } else {
